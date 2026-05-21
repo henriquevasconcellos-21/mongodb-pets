@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { API_BASE_URL } from '../api'
 
 const emit = defineEmits(['pet-added'])
 
@@ -40,7 +41,7 @@ const registerPet = async () => {
       formData.append('image', image.value)
     }
 
-    const response = await fetch('http://localhost:3000/pets', {
+    const response = await fetch(`${API_BASE_URL}/pets`, {
       method: 'POST',
       body: formData
     })

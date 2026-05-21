@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { API_BASE_URL } from '../api'
 
 interface Pet {
   _id?: string
@@ -140,7 +141,7 @@ const handleImageError = (event: Event, pet: Pet) => {
 
 const fetchBreeds = async () => {
   try {
-    const response = await fetch('http://localhost:3000/pets/breeds')
+    const response = await fetch(`${API_BASE_URL}/pets/breeds`)
     if (response.ok) {
       breeds.value = await response.json()
     }
@@ -171,7 +172,7 @@ const fetchPets = async () => {
       params.append('limit', limit)
     }
 
-    const response = await fetch(`http://localhost:3000/pets?${params.toString()}`)
+    const response = await fetch(`${API_BASE_URL}/pets?${params.toString()}`)
     if (!response.ok) {
       throw new Error('Failed to fetch pets')
     }
@@ -284,7 +285,7 @@ const savePetChanges = async () => {
       formData.append('image', editImage.value)
     }
 
-    const response = await fetch(`http://localhost:3000/pets/${selectedPet.value._id}`, {
+    const response = await fetch(`${API_BASE_URL}/pets/${selectedPet.value._id}`, {
       method: 'PATCH',
       body: formData
     })

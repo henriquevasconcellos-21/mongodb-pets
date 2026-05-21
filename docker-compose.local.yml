@@ -17,6 +17,8 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - VITE_API_BASE_URL=http://localhost:3000
     container_name: pets-frontend-local
     ports:
       - "5173:80" # Maps local port 5173 to Nginx port 80
