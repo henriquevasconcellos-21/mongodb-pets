@@ -18,6 +18,11 @@ build/
 *.swp
 *.swo
 
+# AI agent files (Claude Code and other agent providers)
+.claude/
+CLAUDE.md
+CLAUDE.local.md
+
 # OS files
 .DS_Store
 Thumbs.db
