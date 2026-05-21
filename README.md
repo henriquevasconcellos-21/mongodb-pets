@@ -31,6 +31,7 @@ Edit the file and fill in your values:
 | `AWS_SECRET_ACCESS_KEY` | AWS secret key |
 | `AWS_PROFILE` | (Optional) local AWS named profile |
 | `DOMAIN_NAME` | **Production only** — domain Traefik will route (e.g. `pets.yourdomain.com`) |
+| `VITE_API_BASE_URL` | Backend URL baked into the frontend bundle at build time. `http://localhost:3000` for local, `https://pets.yourdomain.com/api` for production |
 
 > **Note:** The project uses **MongoDB Atlas** (cloud). There is no local MongoDB instance — `MONGODB_URI` must point to a valid Atlas cluster.
 
@@ -168,11 +169,14 @@ cp .env.example .env.production
 nano .env.production   # or vi, vim, etc.
 ```
 
-Fill in every variable, and set `DOMAIN_NAME` to the domain Traefik should route, e.g.:
+Fill in every variable. Two are especially important for production:
 
 ```
 DOMAIN_NAME=pets.yourdomain.com
+VITE_API_BASE_URL=https://pets.yourdomain.com/api
 ```
+
+> **`VITE_API_BASE_URL` is baked into the frontend bundle at build time.** If you leave it as `http://localhost:3000` (the default from `.env.example`), the frontend will ship pointing at localhost and every API call will fail in the browser.
 
 ### 3. Verify the external network exists
 
@@ -194,7 +198,7 @@ docker network create web-proxy
 podman network create web-proxy
 ```
 
-### 4. Deploy with Docker
+### 4a. Deploy with Docker
 
 ```bash
 # Build images and start in the background
@@ -211,7 +215,7 @@ git pull
 docker compose --env-file .env.production up -d --build
 ```
 
-### 4. Deploy with Podman
+### 4b. Deploy with Podman
 
 ```bash
 # Build images and start in the background

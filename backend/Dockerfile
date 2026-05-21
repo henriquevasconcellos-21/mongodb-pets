@@ -16,7 +16,7 @@ ENV NODE_ENV=production
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/dist ./dist
 # Only install production dependencies to keep the image small
-RUN npm ci --only=production
+RUN npm ci --omit=dev
 
 # Security: Don't run as root
 USER node
