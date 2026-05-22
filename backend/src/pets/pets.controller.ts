@@ -1,4 +1,16 @@
-import { Controller, Get, Post, Patch, Body, Query, Param, UseInterceptors, UploadedFile, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Query,
+  Param,
+  UseInterceptors,
+  UploadedFile,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { PetsService, Pet } from './pets.service';
 import { CreatePetDto } from './dto/create-pet.dto';
@@ -20,15 +32,19 @@ export class PetsController {
   @UseInterceptors(FileInterceptor('image'))
   async create(
     @UploadedFile() file: Express.Multer.File,
-    @Body() createPetDto: CreatePetDto
+    @Body() createPetDto: CreatePetDto,
   ): Promise<Pet> {
     let imageUrl = '';
-    
+
     if (file) {
       try {
         imageUrl = await this.petsService.uploadImage(file);
       } catch (error) {
-        throw new HttpException('Failed to upload image to S3', HttpStatus.INTERNAL_SERVER_ERROR);
+        console.error('[S3] Upload failed:', error);
+        throw new HttpException(
+          'Failed to upload image to S3',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
     }
 
@@ -43,15 +59,19 @@ export class PetsController {
   async update(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
-    @Body() updatePetDto: UpdatePetDto
+    @Body() updatePetDto: UpdatePetDto,
   ): Promise<Pet> {
     const updateData: any = { ...updatePetDto };
-    
+
     if (file) {
       try {
         updateData.image = await this.petsService.uploadImage(file);
       } catch (error) {
-        throw new HttpException('Failed to upload image to S3', HttpStatus.INTERNAL_SERVER_ERROR);
+        console.error('[S3] Upload failed:', error);
+        throw new HttpException(
+          'Failed to upload image to S3',
+          HttpStatus.INTERNAL_SERVER_ERROR,
+        );
       }
     }
 
