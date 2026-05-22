@@ -165,8 +165,8 @@ cd mongodb-pets
 ### 2. Configure production environment
 
 ```bash
-cp .env.example .env.production
-nano .env.production   # or vi, vim, etc.
+cp .env.example .env
+nano .env   # or vi, vim, etc.
 ```
 
 Fill in every variable. Two are especially important for production:
@@ -177,6 +177,8 @@ VITE_API_BASE_URL=https://pets.yourdomain.com/api
 ```
 
 > **`VITE_API_BASE_URL` is baked into the frontend bundle at build time.** If you leave it as `http://localhost:3000` (the default from `.env.example`), the frontend will ship pointing at localhost and every API call will fail in the browser.
+
+> The file is named `.env` (not `.env.production`) so Docker Compose picks it up automatically — no `--env-file` flag needed on any command.
 
 ### 3. Verify the external network exists
 
@@ -202,7 +204,7 @@ podman network create web-proxy
 
 ```bash
 # Build images and start in the background
-docker compose --env-file .env.production up -d --build
+docker compose up -d --build
 
 # Check running containers
 docker compose ps
@@ -211,15 +213,14 @@ docker compose ps
 docker compose logs -f
 
 # Pull latest code and redeploy
-git pull
-docker compose --env-file .env.production up -d --build
+git pull && docker compose up -d --build
 ```
 
 ### 4b. Deploy with Podman
 
 ```bash
 # Build images and start in the background
-podman compose --env-file .env.production up -d --build
+podman compose up -d --build
 
 # Check running containers
 podman compose ps
@@ -228,8 +229,7 @@ podman compose ps
 podman compose logs -f
 
 # Pull latest code and redeploy
-git pull
-podman compose --env-file .env.production up -d --build
+git pull && podman compose up -d --build
 ```
 
 ### How routing works
@@ -245,13 +245,13 @@ TLS certificates are provisioned automatically by Let's Encrypt via the `myresol
 
 ```bash
 # Stop without removing images
-docker compose --env-file .env.production stop
+docker compose stop
 
 # Destroy containers (keeps images and volumes)
-docker compose --env-file .env.production down
+docker compose down
 
 # Rebuild a single service
-docker compose --env-file .env.production up -d --build pets-backend
+docker compose up -d --build pets-backend
 ```
 
 ---

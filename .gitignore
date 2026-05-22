@@ -4,6 +4,7 @@ node_modules/
 .eslintcache
 
 # Environment variables
+.env
 .env.*
 !.env.example
 
