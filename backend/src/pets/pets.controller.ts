@@ -19,17 +19,24 @@ import { GetPetsFilterDto } from './dto/get-pets-filter.dto';
 import { PetResponse } from './dto/pet-response.dto';
 import 'multer';
 
-@Controller('pets')
+const PETS_ROUTE = 'pets';
+const BREEDS_ROUTE = 'breeds';
+const IMAGE_FIELD = 'image';
+const S3_ERROR_PREFIX = '[S3] Upload failed:';
+const S3_UPLOAD_ERROR_MSG = 'Failed to upload image to S3';
+const PET_NOT_FOUND_MSG = 'Pet not found';
+
+@Controller(PETS_ROUTE)
 export class PetsController {
   constructor(private readonly petsService: PetsService) {}
 
-  @Get('breeds')
+  @Get(BREEDS_ROUTE)
   async getBreeds(): Promise<string[]> {
     return this.petsService.getUniqueBreeds();
   }
 
   @Post()
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FileInterceptor(IMAGE_FIELD))
   async create(
     @UploadedFile() file: Express.Multer.File,
     @Body() createPetDto: CreatePetDto,
@@ -40,11 +47,8 @@ export class PetsController {
       try {
         imageUrl = await this.petsService.uploadImage(file);
       } catch (error) {
-        console.error('[S3] Upload failed:', error);
-        throw new HttpException(
-          'Failed to upload image to S3',
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
+        console.error(S3_ERROR_PREFIX, error);
+        throw new HttpException(S3_UPLOAD_ERROR_MSG, HttpStatus.INTERNAL_SERVER_ERROR);
       }
     }
 
@@ -55,7 +59,7 @@ export class PetsController {
   }
 
   @Patch(':id')
-  @UseInterceptors(FileInterceptor('image'))
+  @UseInterceptors(FileInterceptor(IMAGE_FIELD))
   async update(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
@@ -67,17 +71,14 @@ export class PetsController {
       try {
         updateData.image = await this.petsService.uploadImage(file);
       } catch (error) {
-        console.error('[S3] Upload failed:', error);
-        throw new HttpException(
-          'Failed to upload image to S3',
-          HttpStatus.INTERNAL_SERVER_ERROR,
-        );
+        console.error(S3_ERROR_PREFIX, error);
+        throw new HttpException(S3_UPLOAD_ERROR_MSG, HttpStatus.INTERNAL_SERVER_ERROR);
       }
     }
 
     const updatedPet = await this.petsService.update(id, updateData);
     if (!updatedPet) {
-      throw new HttpException('Pet not found', HttpStatus.NOT_FOUND);
+      throw new HttpException(PET_NOT_FOUND_MSG, HttpStatus.NOT_FOUND);
     }
     return updatedPet;
   }

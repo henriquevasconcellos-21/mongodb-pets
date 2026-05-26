@@ -5,6 +5,16 @@ import { PetResponse, QueryMetrics } from './dto/pet-response.dto';
 import { PetsRepository } from './repositories/pets.repository';
 import { S3Service } from '../integrations/s3/s3.service';
 
+const S3_PETS_FOLDER = 'mongodb_pets';
+const ATLAS_SEARCH_INDEX = 'searchindex';
+const SPECIES_OTHER = 'Other';
+const SPECIES_DOG = 'dog';
+const SPECIES_CAT = 'cat';
+const SORT_NONE = 'none';
+const SORT_ASC = 'asc';
+const METRICS_NA = '-';
+const DEFAULT_UNFILTERED_LIMIT = 20;
+
 export interface Pet {
   _id?: string;
   name: string;
@@ -24,12 +34,11 @@ export class PetsService {
   ) { }
 
   async uploadImage(file: Express.Multer.File): Promise<string> {
-    return this.s3Service.uploadFile(file, 'pets');
+    return this.s3Service.uploadFile(file, S3_PETS_FOLDER);
   }
 
   async create(pet: Pet): Promise<Pet> {
     if (pet.adopted === undefined) pet.adopted = false;
-    // Store species in lowercase for consistency
     if (pet.species) pet.species = pet.species.toLowerCase();
     return this.petsRepository.create(pet);
   }
@@ -41,11 +50,11 @@ export class PetsService {
 
   async findAll(filterDto?: GetPetsFilterDto): Promise<PetResponse> {
     const hasFilters = !!(
-      filterDto?.name || 
-      filterDto?.breed || 
-      filterDto?.species || 
-      filterDto?.adopted !== undefined || 
-      filterDto?.bornAfter || 
+      filterDto?.name ||
+      filterDto?.breed ||
+      filterDto?.species ||
+      filterDto?.adopted !== undefined ||
+      filterDto?.bornAfter ||
       filterDto?.microchipNumber
     );
 
@@ -68,16 +77,15 @@ export class PetsService {
   private getSortObject(filterDto?: GetPetsFilterDto): any {
     if (!filterDto) return null;
     const sort: any = {};
-    
-    // Priority: Name > Breed > BirthDate
-    if (filterDto.sortName && filterDto.sortName !== 'none') {
-      sort.name = filterDto.sortName === 'asc' ? 1 : -1;
+
+    if (filterDto.sortName && filterDto.sortName !== SORT_NONE) {
+      sort.name = filterDto.sortName === SORT_ASC ? 1 : -1;
     }
-    if (filterDto.sortBreed && filterDto.sortBreed !== 'none') {
-      sort.breed = filterDto.sortBreed === 'asc' ? 1 : -1;
+    if (filterDto.sortBreed && filterDto.sortBreed !== SORT_NONE) {
+      sort.breed = filterDto.sortBreed === SORT_ASC ? 1 : -1;
     }
-    if (filterDto.sortBirthDate && filterDto.sortBirthDate !== 'none') {
-      sort.birthDate = filterDto.sortBirthDate === 'asc' ? 1 : -1;
+    if (filterDto.sortBirthDate && filterDto.sortBirthDate !== SORT_NONE) {
+      sort.birthDate = filterDto.sortBirthDate === SORT_ASC ? 1 : -1;
     }
 
     return Object.keys(sort).length > 0 ? sort : null;
@@ -90,7 +98,7 @@ export class PetsService {
 
     const total = await this.petsRepository.count(query);
     const page = filterDto?.page ?? 1;
-    const limit = filterDto?.limit ?? 20;
+    const limit = filterDto?.limit ?? DEFAULT_UNFILTERED_LIMIT;
     const skip = (page - 1) * limit;
 
     const results = await this.petsRepository.findAll(query, skip, limit, sort);
@@ -98,10 +106,10 @@ export class PetsService {
 
     const metrics: QueryMetrics = {
       query: sort ? { find: query, sort } : query,
-      executionTimeMillis: '-',
+      executionTimeMillis: METRICS_NA,
       totalLatencyMillis,
-      indexesUsed: '-',
-      docsScanned: '-',
+      indexesUsed: METRICS_NA,
+      docsScanned: METRICS_NA,
       docsReturned: results.length,
     };
 
@@ -116,8 +124,8 @@ export class PetsService {
     if (name) query.name = { $regex: name, $options: 'i' };
     if (breed) query.breed = breed;
     if (species) {
-      if (species === 'Other') {
-        query.species = { $nin: ['dog', 'cat'] };
+      if (species === SPECIES_OTHER) {
+        query.species = { $nin: [SPECIES_DOG, SPECIES_CAT] };
       } else {
         query.species = species.toLowerCase();
       }
@@ -147,7 +155,6 @@ export class PetsService {
   }
 
   private async findAllWithAtlasSearch(filterDto: GetPetsFilterDto): Promise<PetResponse> {
-    const indexName = 'searchindex';
     const must: any[] = [];
     const mustNot: any[] = [];
     const { name, breed, species, adopted, bornAfter, microchipNumber } = filterDto;
@@ -156,9 +163,9 @@ export class PetsService {
     if (name) must.push({ text: { query: name, path: 'name', fuzzy: {} } });
     if (breed) must.push({ text: { query: breed, path: 'breed' } });
     if (species) {
-      if (species === 'Other') {
-        mustNot.push({ text: { query: 'dog', path: 'species' } });
-        mustNot.push({ text: { query: 'cat', path: 'species' } });
+      if (species === SPECIES_OTHER) {
+        mustNot.push({ text: { query: SPECIES_DOG, path: 'species' } });
+        mustNot.push({ text: { query: SPECIES_CAT, path: 'species' } });
       } else {
         must.push({ text: { query: species.toLowerCase(), path: 'species' } });
       }
@@ -169,12 +176,12 @@ export class PetsService {
 
     const searchStage: any = {
       $search: {
-        index: indexName,
+        index: ATLAS_SEARCH_INDEX,
         compound: {
           must: must,
-          mustNot: mustNot
-        }
-      }
+          mustNot: mustNot,
+        },
+      },
     };
 
     if (sort) {
@@ -185,16 +192,16 @@ export class PetsService {
 
     const startTime = Date.now();
 
-    const results = await this.petsRepository.aggregate(searchPipeline)
+    const results = await this.petsRepository.aggregate(searchPipeline);
 
     const totalLatencyMillis = Date.now() - startTime;
 
     const metrics: QueryMetrics = {
       query: searchPipeline,
-      executionTimeMillis: '-',
+      executionTimeMillis: METRICS_NA,
       totalLatencyMillis,
-      indexesUsed: [indexName],
-      docsScanned: '-',
+      indexesUsed: [ATLAS_SEARCH_INDEX],
+      docsScanned: METRICS_NA,
       docsReturned: results.length,
     };
 

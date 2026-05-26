@@ -1,13 +1,19 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { Db, Collection, Filter, ObjectId } from 'mongodb';
+import { Db, Collection, Filter } from 'mongodb';
 import { Pet } from '../pets.service';
+import { MONGODB_CONNECTION_TOKEN } from '../../database/database.constants';
+
+const PETS_COLLECTION = 'pets';
+const EXPLAIN_MODE = 'executionStats';
+const BREED_FIELD = 'breed';
+const RETURN_DOCUMENT = 'after' as const;
 
 @Injectable()
 export class PetsRepository {
   private collection: Collection<Pet>;
 
-  constructor(@Inject('MONGODB_CONNECTION') private db: Db) {
-    this.collection = this.db.collection<Pet>('dogs');
+  constructor(@Inject(MONGODB_CONNECTION_TOKEN) private db: Db) {
+    this.collection = this.db.collection<Pet>(PETS_COLLECTION);
   }
 
   async create(pet: Pet): Promise<Pet> {
@@ -25,7 +31,7 @@ export class PetsRepository {
     const result = await this.collection.findOneAndUpdate(
       { _id: id as any },
       { $set: data },
-      { returnDocument: 'after' }
+      { returnDocument: RETURN_DOCUMENT },
     );
     return result as unknown as Pet;
   }
@@ -47,14 +53,14 @@ export class PetsRepository {
   }
 
   async explain(query: Filter<Pet>): Promise<any> {
-    return this.collection.find(query).explain('executionStats');
+    return this.collection.find(query).explain(EXPLAIN_MODE);
   }
 
   async explainAggregation(pipeline: any[]): Promise<any> {
-    return this.collection.aggregate(pipeline).explain('executionStats');
+    return this.collection.aggregate(pipeline).explain(EXPLAIN_MODE);
   }
 
   async distinctBreeds(): Promise<string[]> {
-    return this.collection.distinct('breed');
+    return this.collection.distinct(BREED_FIELD);
   }
 }
