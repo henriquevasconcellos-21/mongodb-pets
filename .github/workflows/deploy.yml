@@ -16,6 +16,6 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd /home/ec2-user/app/mongodb-pets
+            cd /home/ec2-user/apps/mongodb-pets
             git pull
             docker compose up -d --build
